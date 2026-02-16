@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Moon, Heart, XCircle, CheckCircle, RefreshCcw, Volume2, Mic2, ChevronDown } from 'lucide-react';
+import { Moon, Heart, XCircle, CheckCircle, RefreshCcw, Mic2, Star, Sparkles, ChevronRight } from 'lucide-react';
 
 // --- 子守唄の歌詞データ ---
 const LULLABY_LYRICS = [
@@ -19,15 +19,15 @@ const LULLABY_LYRICS = [
 // --- 共通の決め台詞 ---
 const FINAL_PHRASE = "ちゃんと、ゴムを、つけてね。";
 
-// --- フローチャートデータ ---
+// --- フローチャートデータ (ロジックは変更なし) ---
 const flowData: Record<string, any> = {
   start: {
     id: 'start',
     type: 'question',
     text: '今夜、夜の営みをしたいですか？',
     options: [
-      { label: 'はい', nextId: 'partner_gender' },
-      { label: 'いいえ', nextId: 'result_sleep' },
+      { label: 'Yes! したい！', nextId: 'partner_gender' },
+      { label: 'No... おやすみ', nextId: 'result_sleep' },
     ],
   },
   partner_gender: {
@@ -35,8 +35,8 @@ const flowData: Record<string, any> = {
     type: 'question',
     text: 'お相手は男性ですか？女性ですか？',
     options: [
-      { label: '男性', nextId: 'is_tired' },
-      { label: '女性', nextId: 'is_period' },
+      { label: '男性 ♂', nextId: 'is_tired' },
+      { label: '女性 ♀', nextId: 'is_period' },
     ],
   },
   is_period: {
@@ -44,8 +44,8 @@ const flowData: Record<string, any> = {
     type: 'question',
     text: 'その女性は女の子の日ですか？',
     options: [
-      { label: 'はい', nextId: 'result_period_stop' },
-      { label: 'いいえ', nextId: 'mood_check' },
+      { label: 'そうなの...', nextId: 'result_period_stop' },
+      { label: '違うよ！', nextId: 'mood_check' },
     ],
   },
   mood_check: {
@@ -53,8 +53,8 @@ const flowData: Record<string, any> = {
     type: 'question',
     text: 'お互いの雰囲気は良いですか？',
     options: [
-      { label: '最高です', nextId: 'result_go' },
-      { label: '微妙かも', nextId: 'result_wine' },
+      { label: '最高！✨', nextId: 'result_go' },
+      { label: '微妙かも...', nextId: 'result_wine' },
     ],
   },
   is_tired: {
@@ -62,63 +62,71 @@ const flowData: Record<string, any> = {
     type: 'question',
     text: 'お相手は仕事でお疲れですか？',
     options: [
-      { label: '疲れてる', nextId: 'result_massage' },
-      { label: '元気ハツラツ', nextId: 'result_go' },
+      { label: 'お疲れ気味💦', nextId: 'result_massage' },
+      { label: '元気ハツラツ💪', nextId: 'result_go' },
     ],
   },
   // --- 結果ノード ---
   result_sleep: {
     id: 'result_sleep',
     type: 'result',
-    text: 'ゆっくり寝ましょう。',
+    text: 'Sleep Tight',
     subText: '睡眠は最高の健康法です。私の歌声で、安らかな眠りについてください...',
     sing: true, // 歌うフラグ
     voiceText: `ゆっくり、寝ましょう。おやすみなさい。${FINAL_PHRASE}`,
     isBad: false,
     iconType: 'sleep',
+    theme: 'cyan',
   },
   result_period_stop: {
     id: 'result_period_stop',
     type: 'result',
-    text: '今日はできません。',
+    text: 'Not Today',
     subText: '無理はいけません。温かい飲み物でも淹れてあげましょう。',
     voiceText: `今日は、できません。無理は、いけません。${FINAL_PHRASE}`,
     isBad: true,
     iconType: 'bad',
+    theme: 'red',
+    youtubeId: 'SbEoiPwADM4', // Sleep BGM
   },
   result_go: {
     id: 'result_go',
     type: 'result',
-    text: '素敵な夜を。',
+    text: 'Have a Nice Night!',
     subText: '準備はいいですか？楽しんでください。',
     voiceText: `素敵な夜を。楽しんでください。${FINAL_PHRASE}`,
     isBad: false,
     iconType: 'heart',
+    theme: 'pink',
   },
   result_wine: {
     id: 'result_wine',
     type: 'result',
-    text: 'ムード作りから。',
+    text: 'Relax First',
     subText: 'まずはワインでも飲んで、リラックスした会話を楽しみましょう。',
     voiceText: `まずは、ムード作りから始めましょう。${FINAL_PHRASE}`,
     isBad: false,
     iconType: 'default',
+    theme: 'purple',
   },
   result_massage: {
     id: 'result_massage',
     type: 'result',
-    text: '癒やしが必要です。',
+    text: 'Healing Time',
     subText: 'まずはマッサージをして労いましょう。',
     voiceText: `癒やしが必要です。マッサージをしてあげましょう。${FINAL_PHRASE}`,
     isBad: false,
     iconType: 'default',
+    theme: 'purple',
   },
 };
 
 export default function App() {
   const [path, setPath] = useState<string[]>(['start']);
-  const [isSpeaking, setIsSpeaking] = useState(false); // 通常のセリフ再生中か
-  const [isSinging, setIsSinging] = useState(false);   // 歌っているか
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSinging, setIsSinging] = useState(false);
+  const [isPlayingBgm, setIsPlayingBgm] = useState(false);
+  const [bgmId, setBgmId] = useState<string | null>(null);
 
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -150,6 +158,8 @@ export default function App() {
     }
     setIsSpeaking(false);
     setIsSinging(false);
+    setIsPlayingBgm(false);
+    setBgmId(null);
   };
 
   // --- 発話オブジェクト作成 ---
@@ -176,7 +186,6 @@ export default function App() {
     return utterance;
   };
 
-  // --- 再生ロジック: セリフ ---
   const speakDeepVoice = (text: string, onEndCallback?: () => void) => {
     if (!synthRef.current) return;
 
@@ -198,7 +207,6 @@ export default function App() {
     }, 100);
   };
 
-  // --- 再生ロジック: 歌 ---
   const playNextLyric = () => {
     if (!synthRef.current) return;
 
@@ -232,7 +240,6 @@ export default function App() {
     playNextLyric();
   };
 
-  // --- インタラクション ---
   const handleSelect = (currentIndex: number, nextId: string) => {
     cancelSpeech();
 
@@ -242,17 +249,20 @@ export default function App() {
 
     const nextNode = flowData[nextId];
 
-    // 結果ノードの場合、自動再生
     if (nextNode && nextNode.type === 'result') {
       setTimeout(() => {
-        // セリフ読み上げ（「ゴムをつけてね」を含む）
         speakDeepVoice(nextNode.voiceText, () => {
-          // その後、歌フラグがあれば歌う
           if (nextNode.sing) {
             startSinging();
+          } else if (nextNode.youtubeId) {
+            setIsPlayingBgm(true);
           }
         });
       }, 600);
+
+      if (nextNode.youtubeId) {
+        setBgmId(nextNode.youtubeId);
+      }
     }
   };
 
@@ -261,88 +271,121 @@ export default function App() {
     setPath(['start']);
   };
 
-  // UIヘルパー
+  // --- UI Parts ---
+
   const renderIcon = (node: any) => {
+    const iconClass = "w-16 h-16 filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]";
     switch (node.iconType) {
       case 'heart':
-        return <Heart className="w-12 h-12 text-pink-500 animate-pulse" />;
+        return <Heart className={`${iconClass} text-pink-500 animate-pulse`} />;
       case 'sleep':
-        return <Moon className="w-12 h-12 text-indigo-400" />;
+        return <Moon className={`${iconClass} text-cyan-400`} />;
       case 'bad':
-        return <XCircle className="w-12 h-12 text-red-500" />;
+        return <XCircle className={`${iconClass} text-red-500`} />;
       default:
         return node.isBad ?
-          <XCircle className="w-12 h-12 text-red-500" /> :
-          <CheckCircle className="w-12 h-12 text-green-500" />;
+          <XCircle className={`${iconClass} text-red-500`} /> :
+          <CheckCircle className={`${iconClass} text-purple-400`} />;
     }
   };
 
-  const getResultStyles = (node: any) => {
-    if (node.isBad) return {
-      borderColor: 'border-red-900/50',
-      gradient: 'from-red-900 to-red-600',
-      iconBg: 'bg-red-500/10 border-red-500/20'
-    };
-    if (node.sing) return {
-      borderColor: 'border-indigo-500/50',
-      gradient: 'from-indigo-400 to-blue-500',
-      iconBg: 'bg-indigo-500/10 border-indigo-500/20'
-    };
-    return {
-      borderColor: 'border-slate-700',
-      gradient: 'from-blue-500 via-purple-500 to-pink-500',
-      iconBg: 'bg-green-500/10 border-green-500/20'
-    };
+  const getThemeStyles = (theme: string) => {
+    switch (theme) {
+      case 'pink':
+        return {
+          card: 'border-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.3)] bg-gradient-to-br from-pink-900/40 to-purple-900/40',
+          text: 'text-pink-300',
+          title: 'text-pink-100',
+          accent: 'bg-pink-500'
+        };
+      case 'cyan':
+        return {
+          card: 'border-cyan-500 shadow-[0_0_30px_rgba(34,211,238,0.3)] bg-gradient-to-br from-cyan-900/40 to-blue-900/40',
+          text: 'text-cyan-300',
+          title: 'text-cyan-100',
+          accent: 'bg-cyan-500'
+        };
+      case 'red':
+        return {
+          card: 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.3)] bg-gradient-to-br from-red-900/40 to-orange-900/40',
+          text: 'text-red-300',
+          title: 'text-red-100',
+          accent: 'bg-red-500'
+        };
+      case 'purple':
+      default:
+        return {
+          card: 'border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.3)] bg-gradient-to-br from-purple-900/40 to-indigo-900/40',
+          text: 'text-purple-300',
+          title: 'text-purple-100',
+          accent: 'bg-purple-500'
+        };
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-purple-500 selection:text-white pb-20">
+    <div className="min-h-screen pb-32 overflow-hidden bg-[#0f0518] relative">
+      {/* Background Decor */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-cyan-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
 
-      {/* 固定ヘッダー */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex justify-between items-center shadow-lg">
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0f0518]/80 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-900/30 rounded-lg">
-            <Moon className="w-6 h-6 text-purple-400" />
+          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg shadow-purple-500/30 animate-glow">
+            <Moon className="w-6 h-6 text-white fill-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-100 tracking-wider">Night Chart</h1>
-            <p className="text-xs text-slate-500">Interactive Diagnosis</p>
+            <h1 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-wider">
+              Night Chart
+            </h1>
+            <p className="text-[10px] font-bold text-purple-300/70 uppercase tracking-[0.2em]">Interactive Diagnosis</p>
           </div>
         </div>
         <button
           onClick={handleReset}
-          className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white"
-          title="最初からやり直す"
+          className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border border-white/10 group"
+          title="Restart"
         >
-          <RefreshCcw className="w-5 h-5" />
+          <RefreshCcw className="w-5 h-5 text-gray-400 group-hover:text-white group-hover:rotate-180 transition-transform duration-500" />
         </button>
       </div>
 
-      {/* メインエリア */}
-      <div className="pt-24 px-4 max-w-2xl mx-auto flex flex-col items-center">
+      {/* Main Content */}
+      <div className="relative z-10 pt-28 px-4 max-w-2xl mx-auto flex flex-col items-center gap-8">
 
         {path.map((nodeId, index) => {
           const node = flowData[nodeId];
           const isLast = index === path.length - 1;
           const nextNodeId = path[index + 1];
+          const theme = getThemeStyles(node.theme || 'purple');
 
           return (
             <div key={`${nodeId}-${index}`} className="w-full flex flex-col items-center animate-slideDown">
 
               <div className={`relative w-full transition-all duration-500 ${node.type === 'result' ? 'max-w-md' : 'max-w-sm'}`}>
 
-                {/* 質問モード */}
+                {/* Question Card */}
                 {node.type === 'question' && (
                   <div className={`
-                    bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-xl transition-all duration-500
-                    ${!isLast ? 'opacity-60 scale-95 border-slate-800' : 'scale-100 border-purple-500/50 shadow-purple-900/20'}
+                    bg-[#1a1025] border-2 rounded-[2rem] p-8 transition-all duration-500
+                    ${!isLast
+                      ? 'opacity-50 scale-95 border-purple-900/30 grayscale-[0.5]'
+                      : 'scale-100 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.2)]'
+                    }
                   `}>
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="font-bold text-lg text-slate-100">{node.text}</h3>
-                      <span className="text-xs font-mono text-slate-600 bg-slate-950 px-2 py-1 rounded">Q{index + 1}</span>
+                    <div className="flex items-center gap-3 mb-6">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-500/20 text-purple-300 font-bold text-sm">
+                        Q{index + 1}
+                      </span>
+                      <h3 className="font-bold text-xl text-white leading-tight">
+                        {node.text}
+                      </h3>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       {node.options.map((option: any, optIndex: number) => {
                         const isSelected = nextNodeId === option.nextId;
                         const isInactive = !isLast && !isSelected;
@@ -353,18 +396,22 @@ export default function App() {
                             onClick={() => handleSelect(index, option.nextId)}
                             disabled={!isLast && isInactive}
                             className={`
-                              relative py-3 px-4 rounded-xl text-sm font-medium transition-all duration-300
-                              flex items-center justify-center gap-2
+                              group relative w-full py-4 px-6 rounded-2xl text-left font-bold transition-all duration-300 border-2
+                              flex items-center justify-between
                               ${isSelected
-                                ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/50 ring-2 ring-purple-400 ring-offset-2 ring-offset-slate-900'
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-transparent text-white shadow-lg shadow-purple-500/25 scale-[1.02]'
                                 : isInactive
-                                  ? 'bg-slate-800 text-slate-600 cursor-default border border-slate-800'
-                                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700 hover:border-slate-600'
+                                  ? 'bg-[#150a1f] text-gray-600 border-transparent'
+                                  : 'bg-[#251b30] text-purple-200 border-purple-500/30 hover:border-purple-400 hover:bg-[#2d223a] hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                               }
                             `}
                           >
-                            {option.label}
-                            {isSelected && <ChevronDown className="w-4 h-4" />}
+                            <span>{option.label}</span>
+                            {isSelected ? (
+                              <CheckCircle className="w-5 h-5 text-white animate-popIn" />
+                            ) : (
+                              <ChevronRight className={`w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity ${isLast ? '-translate-x-2 group-hover:translate-x-0' : ''}`} />
+                            )}
                           </button>
                         );
                       })}
@@ -372,95 +419,113 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 結果モード */}
-                {node.type === 'result' && (() => {
-                  const styles = getResultStyles(node);
-                  return (
-                    <div className={`
-                      bg-gradient-to-br from-slate-900 to-slate-800 border-2 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden animate-popIn
-                      ${styles.borderColor}
-                    `}>
-                      <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${styles.gradient}`}></div>
+                {/* Result Card */}
+                {node.type === 'result' && (
+                  <div className={`
+                    border-4 rounded-[2.5rem] p-8 text-center relative overflow-hidden animate-popIn backdrop-blur-sm
+                    ${theme.card}
+                  `}>
+                    {/* Floating Particles */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <Sparkles className="absolute top-4 right-4 w-6 h-6 text-white/20 animate-spin-slow" />
+                      <Star className="absolute bottom-4 left-4 w-4 h-4 text-white/20 animate-bounce-slow" />
+                    </div>
 
-                      <div className="flex justify-center mb-6">
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center border ${styles.iconBg}`}>
-                          {renderIcon(node)}
-                        </div>
-                      </div>
-
-                      <h2 className="text-3xl font-black text-white mb-3 tracking-tight">
-                        {node.text}
-                      </h2>
-                      <p className="text-slate-400 mb-6 leading-relaxed">
-                        {node.subText}
-                      </p>
-
-                      <div className="flex flex-col items-center gap-4 min-h-[30px] w-full">
-
-                        {/* 自動再生ステータス表示 */}
-                        {isLast && isSpeaking && !isSinging && (
-                          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-purple-500/20 text-purple-300 animate-pulse transition-all border border-purple-500/30">
-                            <Volume2 className="w-4 h-4" />
-                            <span>野太い声で再生中...</span>
-                          </div>
-                        )}
-
-                        {/* 歌唱中表示 */}
-                        {isLast && isSinging && (
-                          <div className="w-full flex flex-col items-center animate-fadeIn mt-2 pt-4 border-t border-slate-700/50">
-
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-indigo-500/20 text-indigo-300 animate-pulse transition-all border border-indigo-500/30">
-                              <Mic2 className="w-4 h-4" />
-                              <span>野太い声で歌唱中...</span>
-                            </div>
-
-                            <div className="mt-6 flex flex-col items-center gap-2 w-full">
-                              <div className="min-h-[3rem] flex items-center justify-center text-center w-full px-4">
-                                <p className="text-lg font-serif text-indigo-200 animate-fadeIn drop-shadow-lg leading-relaxed">
-                                  ♪ {LULLABY_LYRICS[lyricsIndexRef.current] || "..."}
-                                </p>
-                              </div>
-
-                              <div className="flex gap-1 items-end h-8 mt-2">
-                                {[...Array(7)].map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className="w-1.5 bg-indigo-400 rounded-t animate-musicBar"
-                                    style={{
-                                      height: '100%',
-                                      animationDelay: `${i * 0.1}s`,
-                                      animationDuration: '0.8s'
-                                    }}
-                                  ></div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 音声終了後の静止状態 */}
-                        {isLast && !isSpeaking && !isSinging && (
-                          <div className="text-slate-500 text-xs mt-2">
-                            音声再生終了
-                          </div>
-                        )}
+                    <div className="flex justify-center mb-6 relative">
+                      <div className={`absolute inset-0 blur-[40px] ${theme.accent} opacity-30`}></div>
+                      <div className="relative z-10 transform transition-transform hover:scale-110 duration-500">
+                        {renderIcon(node)}
                       </div>
                     </div>
-                  );
-                })()}
+
+                    <h2 className={`text-4xl font-black mb-4 drop-shadow-lg ${theme.title}`}>
+                      {node.text}
+                    </h2>
+                    <div className={`h-1 w-20 mx-auto rounded-full mb-6 ${theme.accent}`}></div>
+
+                    <p className={`text-lg font-medium mb-8 leading-relaxed ${theme.text}`}>
+                      {node.subText}
+                    </p>
+
+                    <div className="bg-black/30 rounded-2xl p-6 backdrop-blur-md border border-white/5">
+                      {/* Interaction Status */}
+                      {isLast && isSpeaking && !isSinging && (
+                        <div className="flex flex-col items-center gap-2 animate-fadeIn">
+                          <div className="flex gap-1 mb-2">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className={`w-2 h-2 rounded-full ${theme.accent} animate-bounce`} style={{ animationDelay: `${i * 0.1}s` }}></div>
+                            ))}
+                          </div>
+                          <span className={`${theme.text} text-sm font-bold tracking-wider uppercase`}>Voice Playing...</span>
+                        </div>
+                      )}
+
+                      {/* Singing Status */}
+                      {isLast && isSinging && (
+                        <div className="flex flex-col items-center animate-fadeIn w-full">
+                          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-opacity-20 ${theme.accent} ${theme.text} mb-4`}>
+                            <Mic2 className="w-4 h-4" />
+                            <span>SINGING MODE</span>
+                          </div>
+
+                          <p className="text-xl font-bold text-white mb-6 text-center drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] min-h-[3rem] flex items-center justify-center">
+                            ♪ {LULLABY_LYRICS[lyricsIndexRef.current] || "..."}
+                          </p>
+
+                          <div className="flex gap-1.5 items-end h-12 w-full justify-center">
+                            {[...Array(12)].map((_, i) => (
+                              <div
+                                key={i}
+                                className={`w-1.5 rounded-full ${theme.accent} animate-musicBar`}
+                                style={{
+                                  height: '30%',
+                                  animationDelay: `${i * 0.05}s`,
+                                  animationDuration: '0.6s'
+                                }}
+                              ></div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* YouTube BGM Player */}
+                      {isLast && isPlayingBgm && bgmId && (
+                        <div className="w-full aspect-video rounded-xl overflow-hidden shadow-lg animate-fadeIn border border-white/10">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={`https://www.youtube.com/embed/${bgmId}?autoplay=1&controls=0&loop=1&playlist=${bgmId}`}
+                            title="YouTube BGM"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full"
+                          ></iframe>
+                        </div>
+                      )}
+
+                      {/* Finished Status */}
+                      {isLast && !isSpeaking && !isSinging && !isPlayingBgm && (
+                        <div className="text-gray-500 text-xs font-mono uppercase tracking-widest">
+                          End of Session
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               </div>
 
+              {/* Connecting Line */}
               {!isLast && (
-                <div className="h-8 w-0.5 bg-gradient-to-b from-purple-500 to-slate-800 my-2 relative opacity-50">
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 border-b-2 border-r-2 border-slate-700 rotate-45 transform translate-y-1"></div>
+                <div className="h-12 w-[2px] bg-purple-900/50 my-2 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-purple-500 to-transparent animate-slideDown"></div>
                 </div>
               )}
             </div>
           );
         })}
 
-        <div ref={bottomRef} className="h-16"></div>
+        <div ref={bottomRef} className="h-32"></div>
       </div>
     </div>
   );
